@@ -161,7 +161,7 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 				//白紙にする
 				textArea.setText(""); 
 				textField.setText("新しいメモ");
-				//タイトルを「新しいメモ」にするタイトルが重複している場合、「新しいメモ(n)」とする
+				//タイトルを「新しいメモ」にする。タイトルが重複している場合、「新しいメモ(n)」とする
 				numbering();
 				//作業している文章に変更がないか比較確認するために現在の文章を取得
 				preSentence = textArea.getText();
@@ -213,8 +213,8 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 				//他のファイルと名前が重複している場合はそのメモを上書きするか確認 
 				if(file.exists()) {
 					//確認
-					System.out.println("ファイル名 [" + newTitle + "] は既に存在しています。" + "\r\n" + "上書きしますか?");
-					//同じ名前のファイルが既に存在しています。 9上書き、10キャンセル
+					System.out.println("ファイル名 [" + newTitle + "] は既に存在しています");
+					//同じ名前のファイルが既に存在しています。 9上書き保存、10別名で保存、11キャンセル
 					flag = 8;
 					//新しいフレームを生成して選択を待つ
 					ConfirmFrame cm = new ConfirmFrame(newTitle); 
@@ -250,23 +250,23 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 				//ファイルが選択されていればその文章を取得する
 				if(fileChoose != null) {
 					//直前に作業していたメモに変更がなければ、そのまま取得した文章を表示する
-					 if(preSentence.equals(newSentence)) { 
-						 choose();
-						 //確認
+					if(preSentence.equals(newSentence)) { 
+						choose();
+						//確認
 						//タイトルが重複していてナンバリング処理された場合、ナンバリングを削除したものをコンソールで表示する
-						 String str = newTitle.replace( "(" + n + ")", ""); 
-						 System.out.println("[" + str + "] を参照しました");
+						String str = newTitle.replace( "(" + n + ")", ""); 
+						System.out.println("[" + str + "] を参照しました");
 					}
 					//直前に作業していたメモに変更があった場合
-					 else {
-						 //変更が保存されていません。flag : 12保存、13保存しない、14キャンセル
-						 flag = 11; 
+					else {
+						//変更が保存されていません。flag : 13保存、14保存しない、15キャンセル
+						flag = 12; 
 						//新しいフレームを生成して選択を待つ
-						 ConfirmFrame cm = new ConfirmFrame(); 
-						 Thread thread = new Thread(this);
-						 thread.start();
-						 return;
-					 }
+						ConfirmFrame cm = new ConfirmFrame(); 
+						Thread thread = new Thread(this);
+						thread.start();
+						return;
+					}
 				}else {
 					//確認
 					System.out.println("ファイルが選択されていません"); 
@@ -443,7 +443,7 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 		changeEnable(false); 
 		windowFlag = 1;
 		//保存する、しない等が選択されるまで繰り返す
-		while(flag == 0 || flag == 4 || flag == 8 || flag == 11 || flag == 15) { 
+		while(flag == 0 || flag == 4 || flag == 8 || flag == 12 || flag == 16) { 
 			try {
 				System.out.println(flag);
 				Thread.sleep(2000);
@@ -485,35 +485,50 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 			System.out.println(preTitle + "が作成されました");
 		case 7: //何もしない
 			break;
-		//タイトル変更の際の分岐(9～10)
-		case 9: //上書きする
+		//タイトル変更の際の分岐(9～11)
+		case 9: //上書き保存する
 			save();
 			oldFile.delete();
 			//作業している文章に変更がないか比較確認するために現在の文章を取得
 			preSentence = textArea.getText();
-			 //タイトル変更に伴いメモ一覧を整理
+			//タイトル変更に伴いメモ一覧を整理
 			arrange();
-			System.out.println("[" + newTitle + "] を上書きしました");
-		case 10: //何もしない
+			System.out.println("[" + newTitle + "] を上書き保存しました");
 			break;
-		//参照から開く際の分岐(12～14)
-		case 12: //保存してから文章取得
+		case 10: //別名で保存する
+			//タイトルを「タイトル(n)」とする
+			numbering();
+			//タイトル変更を実行
+			oldFile.renameTo(file);
+			//確認
+			System.out.println("タイトルを [" + newTitle + "] に変更しました");
+			//作業している文章に変更がないか比較確認するために現在の文章を取得
+			preSentence = textArea.getText();
+			//タイトル変更に伴いメモ一覧を整理
+			arrange();
+			break;
+		case 11: //何もしない
+			//タイトルをもとに戻す
+			textField.setText(preTitle);
+			break;
+		//参照から開く際の分岐(13～15)
+		case 13: //保存してから文章取得
 			save();
 			choose();
 			break;
-		case 13: //保存せず文章取得
+		case 14: //保存せず文章取得
 			choose();
-		case 14: //何もしない
+		case 15: //何もしない
 			break;
-		//ウィンドウを閉じる際の分岐(16～18)
-		case 16: //保存してから閉じる
+		//ウィンドウを閉じる際の分岐(17～19)
+		case 17: //保存してから閉じる
 			save();
 			System.out.println("プログラムを終了します。");
 	    	System.exit(EXIT_ON_CLOSE);
-		case 17: //保存せず閉じる
+		case 18: //保存せず閉じる
 			System.out.println("プログラムを終了します。");
 	    	System.exit(EXIT_ON_CLOSE);		
-		case 18: //何もしない
+		case 19: //何もしない
 		}
 		//タイトル変更ボタンを除いて元フレームのコンポーネントを使えるようにする
 		//ウィンドウも閉じれるようにする
@@ -524,7 +539,7 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 	}
 	
 	public void windowClosing(WindowEvent e) {
-		//確認画面が開いていなければ閉じれる
+		//確認画面(ConfirmFrame)が開いていなければ閉じれる
 		if(windowFlag == 0) {
 			//直前に作業していた文章に変更がないか比較確認するために現在の文章を取得 
 			newSentence = textArea.getText();
@@ -538,7 +553,7 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 			} 
 			else {
 				//直前に作業していたメモに変更があった場合
-				flag = 15; //変更が保存されていません。flag : 1保存、2保存しない、3キャンセル
+				flag = 16; //変更が保存されていません。flag : 17保存、18保存しない、19キャンセル
 				//新しいフレームを生成して選択を待つ
 				ConfirmFrame cm = new ConfirmFrame();
 				Thread thread = new Thread(this);
@@ -560,9 +575,10 @@ class ConfirmFrame extends JFrame  implements ActionListener, WindowListener{
 	JButton saveButton = new JButton("保存する");
 	JButton noSaveButton = new JButton("保存しない");
 	JButton cancelButton = new JButton("キャンセル");
-	JButton overWriteButton = new JButton("上書きする");
+	JButton overWriteButton = new JButton("上書き保存する");
+	JButton differentNameButton = new JButton("別名で保存する");
 	JButton cancelButton2 = new JButton("キャンセル");
-	JLabel label = new JLabel("<html>編集中のメモがが保存されていません。<br>保存しますか？<html>");
+	JLabel label = new JLabel("<html>編集中のメモが保存されていません。<br>保存しますか？<html>");
 	JPanel panel = new JPanel();
 	JPanel panel2 = new JPanel();
 	JPanel panel3 = new JPanel();
@@ -598,19 +614,21 @@ class ConfirmFrame extends JFrame  implements ActionListener, WindowListener{
 		setTitle("確認");
 		setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
-		//ラベルを表示するパネルをコンテナに追加
+		//ラベル作成し、ラベルを表示するパネルをコンテナに追加
 		panel3.setLayout(new FlowLayout());
-		JLabel label2 = new JLabel("<html>ファイル名 [<html>" + newTitle + "<html>] は既に存在しています。<br>上書きしますか？<html>");
+		JLabel label2 = new JLabel("<html>ファイル名 [<html>" + newTitle + "<html>] は既に存在しています。<html>");
 		panel3.add(label2);
 		getContentPane().add(panel3);
 		//ボタンをパネルに配置しコンテナに追加
 		panel.setLayout(new FlowLayout());
 		panel.add(overWriteButton);
+		panel.add(differentNameButton);
 		panel.add(cancelButton2);
 		getContentPane().add(panel);
 		//イベント設定
 		this.addWindowListener(this);
 		overWriteButton.addActionListener(this);
+		differentNameButton.addActionListener(this);
 		cancelButton2.addActionListener(this);
 		setSize(350,200);
 		setVisible(true);
@@ -629,11 +647,14 @@ class ConfirmFrame extends JFrame  implements ActionListener, WindowListener{
 			//キャンセル。何も起こらない
 			MemoFrame.flag += 3;
 		} else if(ae.getSource() == overWriteButton) {
-			//上書きする
+			//上書き保存する
 			MemoFrame.flag += 1;
+		} else if(ae.getSource() == differentNameButton) {
+			//別名で保存する
+			MemoFrame.flag += 2;
 		} else if(ae.getSource() == cancelButton2) {
 			//キャンセル。何も起こらない
-			MemoFrame.flag += 2;
+			MemoFrame.flag += 3;
 		}
 		setVisible(false);
 	}
