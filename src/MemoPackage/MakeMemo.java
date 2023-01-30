@@ -30,7 +30,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnable{
 
-	JTextArea textArea = new JTextArea(30, 20); //メモの記入欄
+	JTextArea memoTextArea = new JTextArea(30, 20); //メモの記入欄
 	JMenuBar menuBar = new JMenuBar(); //メニューバー
 	JMenu memoList = new JMenu("メモ一覧"); //保存済みのメモのタイトルを一覧表示
 	ArrayList<JMenuItem> memoItems = new ArrayList<>(); //保存済みのメモのタイトル
@@ -40,7 +40,7 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 	JButton referenceButton = new JButton("参照"); //他のファイルから参照する際のボタン
 	JButton titleButton = new JButton("タイトルを変える"); //タイトル変更を可能にするボタン
 	JButton titleButton2 = new JButton("タイトル決定"); //タイトルを変更するボタン
-	JTextField textField = new JTextField("", 20); //タイトルの表示欄
+	JTextField titleTextField = new JTextField("新しいメモ", 20); //タイトルの表示欄
 	JPanel panel = new JPanel(); //タイトル関係のコンポーネントを乗せるパネル
 	JFileChooser chooser = new JFileChooser(); //参照する際に使用
 	File fileChoose; //参照した際に使う変数
@@ -68,7 +68,7 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 	MemoFrame(){
 		setTitle("メモ");
 		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-		JScrollPane scrollPane = new JScrollPane(textArea);
+		JScrollPane scrollPane = new JScrollPane(memoTextArea);
 		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 		//メモファイルを保存するディレクトリ（メモ保管庫）を作成
 		dir = new File("メモ保管庫");
@@ -103,7 +103,7 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 		panel.setLayout(new FlowLayout());
 		panel.add(titleButton);
 		panel.add(titleButton2);
-		panel.add(textField);
+		panel.add(titleTextField);
 		getContentPane().add(panel);
 		//テキストを表示するエリアをコンテナに追加
 		getContentPane().add(scrollPane);
@@ -120,9 +120,12 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 		titleButton.addActionListener(this);
 		titleButton2.addActionListener(this);
 		referenceButton.addActionListener(this);
-		//タイトル変更はデフォルトではできないようにする
+		//タイトル変更は「タイトルを変える」ボタンを押さないとできないようにする
 		titleButton2.setEnabled(false); 
-		textField.setEnabled(false);
+		titleTextField.setEnabled(false);
+		//デフォルトのタイトルを「新しいメモ」としているが、すでに同じ名前のファイルが存在する場合がある
+		//よってナンバリング処理をしておく
+		numbering();
 		
 		setSize(700,700);
 		setVisible(true);
@@ -133,47 +136,41 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 		if(ae.getSource() == saveButton) {
 			save();
 		}
-		//確認画面を出してからディレクトリからメモをを削除する。メモ一覧からも削除する
+		//確認画面を出し、ディレクトリからメモをを削除する。
 		else if(ae.getSource() == deleteButton) {
-			//メモタイトルを取得
-			newTitle = textField.getText();
-			//そのタイトルのファイルをメモ保管庫から削除する
-			file = new File(path + "\\" + newTitle + ".txt");
-			if(file.delete()) {
-				System.out.println(newTitle + "を削除しました");
-				textArea.setText(""); //白紙に戻す
-				textField.setText("");
-			}
-			//作業している文章に変更がないか比較確認するために現在の文章を取得
-			preSentence = textArea.getText();
-			//メモ一覧を整理
-   			arrange(); 
+			//確認画面を表示する
+			//削除してよろしいですか? flag : 1削除、2キャンセル
+			flag = 0; 
+			//新しいフレームを生成して選択を待つ
+			ConfirmFrame cm = new ConfirmFrame();
+			Thread thread = new Thread(this);
+			thread.start();
 		}
 		//新規作成。画面を白紙に戻し、タイトルは「新しいメモ」にする。
 		else if(ae.getSource() == newMemoButton) {
 			//直前に作業していた文章に変更がないか比較確認するために現在の文章を取得 
-			newSentence = textArea.getText();
-			newTitle = textField.getText();
+			newSentence = memoTextArea.getText();
+			newTitle = titleTextField.getText();
 			//確認
 			System.out.println(preSentence.equals(newSentence));
 			//直前に作業していたメモに変更がない場合
 			if(preSentence.equals(newSentence)) {
 				//白紙にする
-				textArea.setText(""); 
-				textField.setText("新しいメモ");
+				memoTextArea.setText(""); 
+				titleTextField.setText("新しいメモ");
 				//タイトルを「新しいメモ」にする。タイトルが重複している場合、「新しいメモ(n)」とする
 				numbering();
 				//作業している文章に変更がないか比較確認するために現在の文章を取得
-				preSentence = textArea.getText();
-				preTitle = textField.getText();
+				preSentence = memoTextArea.getText();
+				preTitle = titleTextField.getText();
 				//確認
 				System.out.println(preTitle + "が作成されました");
 			} 
 			//直前に作業していたメモに変更があった場合
 			else {
 				//確認画面を表示する
-				//変更が保存されていません。flag : 5保存、6保存しない、7キャンセル
-				flag = 4; 
+				//変更が保存されていません。flag : 4保存、5保存しない、6キャンセル
+				flag = 3; 
 				//新しいフレームを生成して選択を待つ
 				ConfirmFrame cm = new ConfirmFrame();
 				Thread thread = new Thread(this);
@@ -186,23 +183,22 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 			changeEnable(false); 
 			//タイトル変更に必要なコンポーネントのみ使用可能にする
 			titleButton2.setEnabled(true); 
-			textField.setEnabled(true);
+			titleTextField.setEnabled(true);
 			//変更前のタイトルを取得
-			preTitle = textField.getText(); 
+			preTitle = titleTextField.getText(); 
 		}
 		//タイトルを変更する
 		else if(ae.getSource() == titleButton2){
-			
-			//他のファイルと名前が重複している場合はそのメモを上書きするか確認 
-			//メモ一覧の名前も変える。
-			
 			//変更後のタイトルを取得
-			newTitle = textField.getText();
-			//変更前後のタイトルが同じであれば何もせずコンポーネントの有効・無効を元に戻す
-			if(preTitle.equals(newTitle)) { 
+			newTitle = titleTextField.getText();
+			//変更前後のタイトルが同じ、または空欄である場合
+			if(preTitle.equals(newTitle) || newTitle.equals("")) { 
+				//元のタイトルにする
+				titleTextField.setText(preTitle);
+				//コンポーネントの有効・無効を元に戻す
 				changeEnable(true);
 				titleButton2.setEnabled(false);
-				textField.setEnabled(false);
+				titleTextField.setEnabled(false);
 				return;
 			}
 			//タイトルに変更がある場合、ディレクトリに保存されている当該メモファイルの名前を変更する
@@ -214,8 +210,8 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 				if(file.exists()) {
 					//確認
 					System.out.println("ファイル名 [" + newTitle + "] は既に存在しています");
-					//同じ名前のファイルが既に存在しています。 9上書き保存、10別名で保存、11キャンセル
-					flag = 8;
+					//同じ名前のファイルが既に存在しています。 8上書き保存、9別名で保存、10キャンセル
+					flag = 7;
 					//新しいフレームを生成して選択を待つ
 					ConfirmFrame cm = new ConfirmFrame(newTitle); 
 					Thread thread = new Thread(this);
@@ -231,7 +227,7 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 			//コンポーネントの有効・無効を元に戻す
 			changeEnable(true); 
 			titleButton2.setEnabled(false);
-			textField.setEnabled(false);
+			titleTextField.setEnabled(false);
 		}
 		//他のファイルから文章を参照する
 		else if(ae.getSource() == referenceButton) { 
@@ -246,7 +242,7 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 				//「開く」ボタンが押されたときに選択しているファイルを変数に格納
 				fileChoose = chooser.getSelectedFile();
 				//直前に作業していた文章に変更がないか比較確認するために現在の文章を取得
-				newSentence = textArea.getText();
+				newSentence = memoTextArea.getText();
 				//ファイルが選択されていればその文章を取得する
 				if(fileChoose != null) {
 					//直前に作業していたメモに変更がなければ、そのまま取得した文章を表示する
@@ -259,8 +255,8 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 					}
 					//直前に作業していたメモに変更があった場合
 					else {
-						//変更が保存されていません。flag : 13保存、14保存しない、15キャンセル
-						flag = 12; 
+						//変更が保存されていません。flag : 12保存、13保存しない、14キャンセル
+						flag = 11; 
 						//新しいフレームを生成して選択を待つ
 						ConfirmFrame cm = new ConfirmFrame(); 
 						Thread thread = new Thread(this);
@@ -288,15 +284,15 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 					//確認
 					System.out.println(memoItems.get(i).getText() + "がクリックされました");
 					//直前に作業していた文章に変更がないか比較確認するために現在の文章を取得
-					newSentence = textArea.getText(); 
+					newSentence = memoTextArea.getText(); 
 					//作業中の文章に変更がなければ、そのままファイルから文章を取得
 					if(preSentence.equals(newSentence)) {
 						acquire(i); 
 					}
 					//直前に作業していたメモに変更があった場合
 					else {
-						//変更が保存されていません。flag : 1保存、2保存しない、3キャンセル
-						flag = 0; 
+						//変更が保存されていません。flag : 16保存、17保存しない、18キャンセル
+						flag = 15; 
 						j = i;
 						//新しいフレームを生成して選択を待つ
 						ConfirmFrame cm = new ConfirmFrame(); 
@@ -312,8 +308,8 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 	public void save() { 
 		try {
 			//現在の文章とタイトルを取得
-			newSentence = textArea.getText();
-			newTitle = textField.getText();
+			newSentence = memoTextArea.getText();
+			newTitle = titleTextField.getText();
 			//取得したタイトルでテキストファイルを作成
 			file = new File(path + "\\" + newTitle + ".txt");
 			//作成したファイルに取得した文章を書きこむ
@@ -326,7 +322,7 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 			//確認
 			System.out.println("タイトル" + newTitle + "で" + newSentence + "を書き込みました");
 			//作業している文章に変更がないか比較確認するために現在の文章を取得
-			preSentence = textArea.getText();
+			preSentence = memoTextArea.getText();
 			//メモ一覧を整理
 			arrange(); 
 		}catch(IOException e) {
@@ -359,20 +355,20 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 	public void acquire(int i) {
 		try {
 			//メモの入力欄を白紙にする
-			textArea.setText("");
+			memoTextArea.setText("");
 			//タイトル欄に選択したメモのタイトルを表示
-			textField.setText(memoItems.get(i).getText());
+			titleTextField.setText(memoItems.get(i).getText());
 			//文章を取得
 			file = new File(path + "\\" + memoItems.get(i).getText() + ".txt");
 			fr = new FileReader(file);
 			br = new BufferedReader(fr);
 			while((newSentence = br.readLine()) != null) {
-				textArea.append(newSentence + "\n");
-				textArea.setCaretPosition(textArea.getText().length());
+				memoTextArea.append(newSentence + "\n");
+				memoTextArea.setCaretPosition(memoTextArea.getText().length());
 			}
 			br.close();
 			//作業している文章に変更がないか比較確認するために現在の文章を取得
-			preSentence = textArea.getText();
+			preSentence = memoTextArea.getText();
 		}catch(IOException e) {
 			e.printStackTrace();
 		}
@@ -381,21 +377,21 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 	public void choose() { 
 		try {
 			//メモの入力欄とタイトル欄を白紙にする
-			textArea.setText("");
-			textField.setText("");
+			memoTextArea.setText("");
+			titleTextField.setText("");
 			//文章を取得
 			file = new File(fileChoose.getPath());
 			fr = new FileReader(file);
 			br = new BufferedReader(fr);
 			while((newSentence = br.readLine()) != null) {
-				textArea.append(newSentence + "\n");
-				textArea.setCaretPosition(textArea.getText().length());
+				memoTextArea.append(newSentence + "\n");
+				memoTextArea.setCaretPosition(memoTextArea.getText().length());
 			}
 			//参照したファイルのファイル名を取得
 			String s = fileChoose.getName();
 			String sRemoved = s.replace(".txt", "");
 			//取得したファイル名をタイトル欄に表示
-			textField.setText(sRemoved);
+			titleTextField.setText(sRemoved);
 			//すでに同じメモタイトルが存在する場合、ナンバリングする
 			numbering(); 
 			br.close();
@@ -412,8 +408,8 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 		newMemoButton.setEnabled(b);
 		titleButton.setEnabled(b);
 		titleButton2.setEnabled(b);
-		textField.setEnabled(b);
-		textArea.setEnabled(b);
+		titleTextField.setEnabled(b);
+		memoTextArea.setEnabled(b);
 		referenceButton.setEnabled(b);
 	}
 	
@@ -421,7 +417,7 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 	public void numbering() {
 		 n = 1;
 		 //現在のタイトルを取得
-		 newTitle = textField.getText();
+		 newTitle = titleTextField.getText();
 	 	 file = new File(path + "\\" + newTitle + ".txt");
 	 	 //同じファイル名がすでに存在している場合
 		 while(file.exists()) {
@@ -433,17 +429,17 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 			 //新たなファイル名でメモ保管庫にファイルを作成
 			 file = new File(path + "\\" + newTitle + ".txt");
 		 }
-		 textField.setText(newTitle);
+		 titleTextField.setText(newTitle);
 	}
 	
 	public void run() {
 		System.out.println("スレッドスタート");
 		//確認画面が開いている間、MemoFrameのコンポーネントを使えなくする
-		//ウィンドウも閉じれなくする
 		changeEnable(false); 
+		//MemoFrameを閉じれなくする
 		windowFlag = 1;
 		//保存する、しない等が選択されるまで繰り返す
-		while(flag == 0 || flag == 4 || flag == 8 || flag == 12 || flag == 16) { 
+		while(flag == 0 || flag == 3 || flag == 7 || flag == 11 || flag == 15 || flag == 19) { 
 			try {
 				System.out.println(flag);
 				Thread.sleep(2000);
@@ -455,47 +451,56 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 		System.out.println(flag);
 		//選択に応じてflagの値が変化する
 		switch(flag) {
-		//メモ一覧から選んだ際の分岐(1～3)
-		case 1: //保存してから文章取得
-			save(); 
-			acquire(j);
+		//削除する際の分岐(1～2)
+		case 1: //削除
+			//メモタイトルを取得
+			newTitle = titleTextField.getText();
+			//そのタイトルのファイルをメモ保管庫から削除する
+			file = new File(path + "\\" + newTitle + ".txt");
+			if(file.delete()) {
+				System.out.println(newTitle + "を削除しました");
+				memoTextArea.setText(""); //白紙に戻す
+				titleTextField.setText("");
+			}
+			//作業している文章に変更がないか比較確認するために現在の文章を取得
+			preSentence = memoTextArea.getText();
+			//メモ一覧を整理
+   			arrange(); 
 			break;
-		case 2: //保存せず文章取得
-			acquire(j);
-		case 3: //何もしない
+		case 2: //キャンセル。何もしない
 			break;
-		//新規作成の際の分岐(5～7)
-		case 5: //保存してから新規作成
+		//新規作成の際の分岐(4～6)
+		case 4: //保存してから新規作成
 			save();
-			textArea.setText("");
-			textField.setText("新しいメモ");
+			memoTextArea.setText("");
+			titleTextField.setText("新しいメモ");
 			//タイトルが重複している場合があるためナンバリングメソッド使用
 			numbering();
 			//作業している文章に変更がないか比較確認するために現在の文章を取得
-			preSentence = textArea.getText();
+			preSentence = memoTextArea.getText();
 			System.out.println(preTitle + "が作成されました");
 			break;
-		case 6: //保存せず新規作成
-			textArea.setText("");
-			textField.setText("新しいメモ");
+		case 5: //保存せず新規作成
+			memoTextArea.setText("");
+			titleTextField.setText("新しいメモ");
 			//タイトルが重複している場合があるためナンバリングメソッド使用
 			numbering();
 			//作業している文章に変更がないか比較確認するために現在の文章を取得
-			preSentence = textArea.getText();
+			preSentence = memoTextArea.getText();
 			System.out.println(preTitle + "が作成されました");
-		case 7: //何もしない
+		case 6: //キャンセル。何もしない
 			break;
-		//タイトル変更の際の分岐(9～11)
-		case 9: //上書き保存する
+		//タイトル変更の際の分岐(8～10)
+		case 8: //上書き保存する
 			save();
 			oldFile.delete();
 			//作業している文章に変更がないか比較確認するために現在の文章を取得
-			preSentence = textArea.getText();
+			preSentence = memoTextArea.getText();
 			//タイトル変更に伴いメモ一覧を整理
 			arrange();
 			System.out.println("[" + newTitle + "] を上書き保存しました");
 			break;
-		case 10: //別名で保存する
+		case 9: //別名で保存する
 			//タイトルを「タイトル(n)」とする
 			numbering();
 			//タイトル変更を実行
@@ -503,46 +508,55 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 			//確認
 			System.out.println("タイトルを [" + newTitle + "] に変更しました");
 			//作業している文章に変更がないか比較確認するために現在の文章を取得
-			preSentence = textArea.getText();
+			preSentence = memoTextArea.getText();
 			//タイトル変更に伴いメモ一覧を整理
 			arrange();
 			break;
-		case 11: //何もしない
+		case 10: //キャンセル
 			//タイトルをもとに戻す
-			textField.setText(preTitle);
+			titleTextField.setText(preTitle);
 			break;
-		//参照から開く際の分岐(13～15)
-		case 13: //保存してから文章取得
+		//参照から開く際の分岐(12～14)
+		case 12: //保存してから文章取得
 			save();
 			choose();
 			break;
-		case 14: //保存せず文章取得
+		case 13: //保存せず文章取得
 			choose();
-		case 15: //何もしない
+		case 14: //キャンセル。何もしない
 			break;
-		//ウィンドウを閉じる際の分岐(17～19)
-		case 17: //保存してから閉じる
+		//メモ一覧から選んだ際の分岐(16～18)
+		case 16: //保存してから文章取得
+			save(); 
+			acquire(j);
+			break;
+		case 17: //保存せず文章取得
+			acquire(j);
+		case 18: //キャンセル。何もしない
+			break;
+		//ウィンドウを閉じる際の分岐(20～22)
+		case 20: //保存してから閉じる
 			save();
 			System.out.println("プログラムを終了します。");
 	    	System.exit(EXIT_ON_CLOSE);
-		case 18: //保存せず閉じる
+		case 21: //保存せず閉じる
 			System.out.println("プログラムを終了します。");
 	    	System.exit(EXIT_ON_CLOSE);		
-		case 19: //何もしない
+		case 22: //キャンセル。何もしない
 		}
 		//タイトル変更ボタンを除いて元フレームのコンポーネントを使えるようにする
-		//ウィンドウも閉じれるようにする
 		changeEnable(true); 
+		//MemoFrameを閉じれるようにする
 		windowFlag = 0;
 		titleButton2.setEnabled(false);
-		textField.setEnabled(false);
+		titleTextField.setEnabled(false);
 	}
 	
 	public void windowClosing(WindowEvent e) {
-		//確認画面(ConfirmFrame)が開いていなければ閉じれる
+		//確認画面(ConfirmFrame)が開いていなければMemoFrameを閉じれる
 		if(windowFlag == 0) {
 			//直前に作業していた文章に変更がないか比較確認するために現在の文章を取得 
-			newSentence = textArea.getText();
+			newSentence = memoTextArea.getText();
 			//確認
 			System.out.println(preSentence.equals(newSentence));
 			//直前に作業していたメモに変更がない場合
@@ -553,7 +567,7 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 			} 
 			else {
 				//直前に作業していたメモに変更があった場合
-				flag = 16; //変更が保存されていません。flag : 17保存、18保存しない、19キャンセル
+				flag = 19; //変更が保存されていません。flag : 20保存、21保存しない、22キャンセル
 				//新しいフレームを生成して選択を待つ
 				ConfirmFrame cm = new ConfirmFrame();
 				Thread thread = new Thread(this);
@@ -572,40 +586,66 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 
 //確認画面を出すクラス
 class ConfirmFrame extends JFrame  implements ActionListener, WindowListener{ 
+	JButton deleteButton = new JButton("削除する");
+	JButton deleteCancelButton = new JButton("キャンセル");
 	JButton saveButton = new JButton("保存する");
 	JButton noSaveButton = new JButton("保存しない");
 	JButton cancelButton = new JButton("キャンセル");
 	JButton overWriteButton = new JButton("上書き保存する");
 	JButton differentNameButton = new JButton("別名で保存する");
-	JButton cancelButton2 = new JButton("キャンセル");
-	JLabel label = new JLabel("<html>編集中のメモが保存されていません。<br>保存しますか？<html>");
+	JLabel label = new JLabel("<html>選択中のメモを削除してよろしいですか？<html>");
+	JLabel label2 = new JLabel("<html>編集中のメモが保存されていません。<br>保存しますか？<html>");
 	JPanel panel = new JPanel();
 	JPanel panel2 = new JPanel();
 	JPanel panel3 = new JPanel();
 	String newTitle;
 	
-	//メモ入力欄の文章の変更を保存するか確認する際のコンストラクタ
+	//メモを削除するか確認する際の、または、メモ入力欄の文章の変更を保存するか確認する際のコンストラクタ
 	ConfirmFrame(){
-		setTitle("確認");
-		setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
-		//ラベルを表示するパネルをコンテナに追加
-		panel2.setLayout(new FlowLayout());
-		panel2.add(label);
-		getContentPane().add(panel2);
-		//ボタンをパネルに配置しコンテナに追加
-		panel.setLayout(new FlowLayout());
-		panel.add(saveButton);
-		panel.add(noSaveButton);
-		panel.add(cancelButton);
-		getContentPane().add(panel);
-		//イベント設定
-		this.addWindowListener(this);
-		saveButton.addActionListener(this);
-		noSaveButton.addActionListener(this);
-		cancelButton.addActionListener(this);
-		setSize(350,200);
-		setVisible(true);
+		//メモを削除するか確認する場合
+		if(MemoFrame.flag == 0) {
+			setTitle("確認");
+			setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+			getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
+			//ラベルを表示するパネルをコンテナに追加
+			panel2.setLayout(new FlowLayout());
+			panel2.add(label);
+			getContentPane().add(panel2);
+			//ボタンをパネルに配置しコンテナに追加
+			panel.setLayout(new FlowLayout());
+			panel.add(deleteButton);
+			panel.add(deleteCancelButton);
+			getContentPane().add(panel);
+			//イベント設定
+			this.addWindowListener(this);
+			deleteButton.addActionListener(this);
+			deleteCancelButton.addActionListener(this);
+			setSize(350,200);
+			setVisible(true);
+		}
+		//メモの変更を保存するか確認する場合
+		else {
+			setTitle("確認");
+			setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+			getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
+			//ラベルを表示するパネルをコンテナに追加
+			panel2.setLayout(new FlowLayout());
+			panel2.add(label2);
+			getContentPane().add(panel2);
+			//ボタンをパネルに配置しコンテナに追加
+			panel.setLayout(new FlowLayout());
+			panel.add(saveButton);
+			panel.add(noSaveButton);
+			panel.add(cancelButton);
+			getContentPane().add(panel);
+			//イベント設定
+			this.addWindowListener(this);
+			saveButton.addActionListener(this);
+			noSaveButton.addActionListener(this);
+			cancelButton.addActionListener(this);
+			setSize(350,200);
+			setVisible(true);
+		}
 	}
 	
 	//重複しているタイトルを上書保存するか確認する際のコンストラクタ
@@ -616,20 +656,20 @@ class ConfirmFrame extends JFrame  implements ActionListener, WindowListener{
 		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 		//ラベル作成し、ラベルを表示するパネルをコンテナに追加
 		panel3.setLayout(new FlowLayout());
-		JLabel label2 = new JLabel("<html>ファイル名 [<html>" + newTitle + "<html>] は既に存在しています。<html>");
-		panel3.add(label2);
+		JLabel label3 = new JLabel("<html>ファイル名 [<html>" + newTitle + "<html>] は既に存在しています。<html>");
+		panel3.add(label3);
 		getContentPane().add(panel3);
 		//ボタンをパネルに配置しコンテナに追加
 		panel.setLayout(new FlowLayout());
 		panel.add(overWriteButton);
 		panel.add(differentNameButton);
-		panel.add(cancelButton2);
+		panel.add(cancelButton);
 		getContentPane().add(panel);
 		//イベント設定
 		this.addWindowListener(this);
 		overWriteButton.addActionListener(this);
 		differentNameButton.addActionListener(this);
-		cancelButton2.addActionListener(this);
+		cancelButton.addActionListener(this);
 		setSize(350,200);
 		setVisible(true);
 		
@@ -637,7 +677,13 @@ class ConfirmFrame extends JFrame  implements ActionListener, WindowListener{
 	
 	public void actionPerformed(ActionEvent ae) {
 		//選択に応じてflagの値を変化させる
-		if(ae.getSource() == saveButton) {
+		if(ae.getSource() == deleteButton) {
+			//削除する
+			MemoFrame.flag += 1;
+		} else if(ae.getSource() == deleteCancelButton) {
+			//キャンセル。何も起こらない
+			MemoFrame.flag += 2;
+		} else if(ae.getSource() == saveButton) {
 			//保存する
 			MemoFrame.flag += 1;
 		} else if(ae.getSource() == noSaveButton) {
@@ -652,16 +698,13 @@ class ConfirmFrame extends JFrame  implements ActionListener, WindowListener{
 		} else if(ae.getSource() == differentNameButton) {
 			//別名で保存する
 			MemoFrame.flag += 2;
-		} else if(ae.getSource() == cancelButton2) {
-			//キャンセル。何も起こらない
-			MemoFrame.flag += 3;
 		}
 		setVisible(false);
 	}
 
 	public void windowClosing(WindowEvent e) {
 		//キャンセルと同じ。何も起こらない
-		MemoFrame.flag = 3;
+		MemoFrame.flag = 2;
 	}
 	
 	public void windowOpened(WindowEvent e) {}
