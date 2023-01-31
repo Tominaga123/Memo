@@ -93,6 +93,7 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 			memoList.add(memoItems.get(i)); 
 			i++;
 		}
+		
 		menuBar.add(memoList);
 		menuBar.add(saveButton);
 		menuBar.add(deleteButton);
