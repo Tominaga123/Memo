@@ -277,11 +277,7 @@ class MemoFrame extends JFrame implements ActionListener, WindowListener,Runnabl
 		else {  
 			//メモ一覧内のどのメモタイトルが押されたか、メモ一覧を順に確認する
 			for(int i = 0; i < memoItems.size(); i++) { 
-				if(ae.getSource() == memoItems.get(i)) { 
-					//ディレクトリにあるメモファイルの名前を一覧表示する
-					//メモタイトルをクリックするとそれを画面に表示する
-					//直前に作業していたメモの変更が保存されていない場合は、保存するか確認画面を出す
-					
+				if(ae.getSource() == memoItems.get(i)) { 	
 					//確認
 					System.out.println(memoItems.get(i).getText() + "がクリックされました");
 					//直前に作業していた文章に変更がないか比較確認するために現在の文章を取得
@@ -599,7 +595,6 @@ class ConfirmFrame extends JFrame  implements ActionListener, WindowListener{
 	JPanel panel = new JPanel();
 	JPanel panel2 = new JPanel();
 	JPanel panel3 = new JPanel();
-	String newTitle;
 	
 	//メモを削除するか確認する際の、または、メモ入力欄の文章の変更を保存するか確認する際のコンストラクタ
 	ConfirmFrame(){
@@ -651,7 +646,6 @@ class ConfirmFrame extends JFrame  implements ActionListener, WindowListener{
 	
 	//重複しているタイトルを上書保存するか確認する際のコンストラクタ
 	ConfirmFrame(String newTitle){
-		this.newTitle = newTitle;
 		setTitle("確認");
 		setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
